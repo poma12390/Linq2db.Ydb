@@ -2,6 +2,7 @@
 using System.Data.Common;
 using System.Globalization;
 using System.Text;
+using System.Text.RegularExpressions;
 using LinqToDB;
 using LinqToDB.DataProvider;
 using LinqToDB.Internal.DataProvider;
@@ -111,11 +112,77 @@ namespace Linq2db.Ydb.Internal
 					DataType.Int64 => "BIGSERIAL",
 					_ => throw new InvalidOperationException($"Unsupported identity field type {field.Type.DataType}")
 				});
+				return;
+			}
 
+			// Новая логика: если у колонки задан явный DbType — используем его (старые/новые типы).
+			// Иначе — дефолтные старые типы через базовую логику.
+			var dbType = field.ColumnDescriptor != null
+				? field.ColumnDescriptor.DbType?.Trim()
+				: null;
+
+			if (!string.IsNullOrEmpty(dbType))
+			{
+				StringBuilder.Append(NormalizeYdbDbType(dbType!, field));
 				return;
 			}
 
 			base.BuildCreateTableFieldType(field);
+		}
+		private string NormalizeYdbDbType(string dbType, SqlField field)
+		{
+			// Поддержка явных новых и старых типов:
+			//   Date32 / Datetime64 / Timestamp64 / Interval64
+			//   Date / Datetime / Timestamp / Interval
+			// Прочие: Json / JsonDocument / Yson / Utf8 / String / Bytes / Uuid
+			// Decimal и Decimal(p,s): учитываем глобальную опцию UseParametrizedDecimal и Precision/Scale
+
+			string s = dbType.Trim();
+
+			// 1) Decimal: "Decimal" или "Decimal(p,s)"
+			var m = Regex.Match(s, @"^\s*decimal\s*(?:\(\s*(\d+)\s*,\s*(\d+)\s*\))?\s*$", RegexOptions.IgnoreCase);
+			if (m.Success)
+			{
+				// Явно указанные p,s
+				if (m.Groups[1].Success && m.Groups[2].Success)
+					return $"Decimal({m.Groups[1].Value},{m.Groups[2].Value})";
+
+				// Если p,s не указаны — уважаем глобальный флаг и Precision/Scale колонки
+				if (_providerOptions.UseParametrizedDecimal)
+				{
+					var p  = field.Type.Precision ?? YdbMappingSchema.DEFAULT_DECIMAL_PRECISION;
+					var s2 = field.Type.Scale     ?? YdbMappingSchema.DEFAULT_DECIMAL_SCALE;
+					return $"Decimal({p},{s2})";
+				}
+
+				return "Decimal";
+			}
+
+			// 2) Нормализация известных имён к регистру YDB
+			static bool Eq(string a, string b) => a.Equals(b, StringComparison.OrdinalIgnoreCase);
+
+			if (Eq(s, "Date32"))       return "Date32";
+			if (Eq(s, "Datetime64"))   return "Datetime64";
+			if (Eq(s, "Timestamp64"))  return "Timestamp64";
+			if (Eq(s, "Interval64"))   return "Interval64";
+
+			if (Eq(s, "Date"))         return "Date";
+			if (Eq(s, "Datetime"))     return "Datetime";
+			if (Eq(s, "Timestamp"))    return "Timestamp";
+			if (Eq(s, "Interval"))     return "Interval";
+
+			if (Eq(s, "Json"))         return "Json";
+			if (Eq(s, "JsonDocument")) return "JsonDocument";
+			if (Eq(s, "Yson"))         return "Yson";
+			if (Eq(s, "Utf8"))         return "Utf8";
+			if (Eq(s, "Uuid"))         return "Uuid";
+
+			// "Bytes" → физически "String" в YDB
+			if (Eq(s, "Bytes"))        return "String";
+			if (Eq(s, "String"))       return "String";
+
+			// Любые иные явные DbType — отдаём «как есть»
+			return s;
 		}
 
 		protected override void BuildDataTypeFromDataType(DbDataType type, bool forCreateTable, bool canBeNull)

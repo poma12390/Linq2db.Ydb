@@ -315,6 +315,10 @@ namespace Linq2db.Ydb.Internal
 			UInt8        = 6,
 			Unspecified  = 0,
 			Uuid         = 17,
+			Date32       = 30,
+			Datetime64   = 31,
+			Timestamp64  = 32,
+			Interval64   = 33,
 
 			// missing simple types:
 			// DyNumber

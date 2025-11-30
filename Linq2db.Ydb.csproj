@@ -1,17 +1,40 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
 
-    <PropertyGroup>
-        <TargetFramework>net8.0</TargetFramework>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
-    </PropertyGroup>
+    <!-- NuGet -->
+    <PackageId>Community.Ydb.Linq2db</PackageId>
+    <Version>0.0.2</Version>
+    <Authors>Kochnev Roman</Authors>
+    <Description>Community Linq To DB provider for YDB (Yandex Database).</Description>
+    <PackageTags>linq2db;ydb;linq;database;dotnet</PackageTags>
 
-<ItemGroup>
-  <PackageReference Include="linq2db" Version="6.0.0-rc.3" />
-  <PackageReference Include="Ydb.Sdk" Version="0.24.0" />
-  <PackageReference Include="IgnoresAccessChecksToGenerator" Version="0.8.0" PrivateAssets="all" />
-</ItemGroup>
-<ItemGroup>
-  <IgnoresAccessChecksTo Include="linq2db" />
-</ItemGroup>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/poma12390/Linq2db.Ydb</RepositoryUrl>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <Deterministic>true</Deterministic>
+
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="linq2db" Version="6.0.0-rc.3" />
+    <PackageReference Include="Ydb.Sdk" Version="0.26.0" />
+    <PackageReference Include="IgnoresAccessChecksToGenerator" Version="0.8.0" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <IgnoresAccessChecksTo Include="linq2db" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
 </Project>
